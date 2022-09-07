@@ -81,11 +81,8 @@ class NFNeXt(nn.Module):
         )
         head = []
         for _ in range(num_head_layers - 1):
-            if drop_rate > 0:
-                head += [nn.Dropout(drop_rate)]
             head += [nn.Linear(dims[-1], dims[-1]), nn.ReLU(inplace=True)]
-        if drop_rate > 0:
-            head += [nn.Dropout(drop_rate)]
+        head += [nn.Dropout(drop_rate)] if drop_rate > 0 else [nn.Identity()]
         head += [nn.Linear(dims[-1], num_classes)]
         self.head = nn.Sequential(*head)
         self.apply(self.init_weights)
