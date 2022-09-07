@@ -82,9 +82,11 @@ class NFNeXt(nn.Module):
         head = []
         for _ in range(num_head_layers - 1):
             head += [nn.Linear(dims[-1], dims[-1]), nn.ReLU(inplace=True)]
-        head += [nn.Dropout(drop_rate)] if drop_rate > 0 else [nn.Identity()]
-        head += [nn.Linear(dims[-1], num_classes)]
-        self.head = nn.Sequential(*head)
+        if drop_rate > 0:
+            head += [nn.Dropout(drop_rate)]
+        self.head = nn.Sequential(
+            nn.Sequential(*head), nn.Linear(dims[-1], num_classes)
+        )
         self.apply(self.init_weights)
 
     def forward_features(self, x: torch.Tensor) -> torch.Tensor:
