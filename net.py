@@ -34,16 +34,17 @@ class NFNeXt(nn.Module):
         self,
         depths: Sequence[int] = (3, 3, 9, 3),
         dims: Sequence[int] = (96, 192, 384, 768),
-        in_chans: int = 3,
+        in_channels: int = 3,
         num_classes: int = 1000,
+        num_head_layers: int = 1,
         drop_rate: float = 0.0,
         drop_path_rate: float = 0.0,
     ) -> None:
         super().__init__()
         self.stem = nn.Sequential(
-            nn.Conv2d(in_chans, 16 * in_chans, kernel_size=1),
+            nn.Conv2d(in_channels, 16 * in_channels, kernel_size=1),
             nn.AvgPool2d(kernel_size=4, stride=4),
-            ScaledStdConv2d(16 * in_chans, dims[0], kernel_size=1),
+            ScaledStdConv2d(16 * in_channels, dims[0], kernel_size=1),
         )
         dp_rates = torch.linspace(0, drop_path_rate, sum(depths)).split(depths)
         dp_rates = [x.tolist() for x in dp_rates]
@@ -78,10 +79,15 @@ class NFNeXt(nn.Module):
             nn.Flatten(),
             nn.LayerNorm(dims[-1], eps=1e-6),
         )
-        self.head = nn.Sequential(
-            nn.Dropout(drop_rate),
-            nn.Linear(dims[-1], num_classes),
-        )
+        head = []
+        for _ in range(num_head_layers - 1):
+            if drop_rate > 0:
+                head += [nn.Dropout(drop_rate)]
+            head += [nn.Linear(dims[-1], dims[-1]), nn.ReLU(inplace=True)]
+        if drop_rate > 0:
+            head += [nn.Dropout(drop_rate)]
+        head += [nn.Linear(dims[-1], num_classes)]
+        self.head = nn.Sequential(*head)
         self.apply(self.init_weights)
 
     def forward_features(self, x: torch.Tensor) -> torch.Tensor:
