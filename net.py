@@ -79,14 +79,16 @@ class NFNeXt(nn.Module):
             nn.Flatten(),
             nn.LayerNorm(dims[-1], eps=1e-6),
         )
-        head = []
-        for _ in range(num_head_layers - 1):
-            head += [nn.Linear(dims[-1], dims[-1]), nn.ReLU(inplace=True)]
-        if drop_rate > 0:
-            head += [nn.Dropout(drop_rate)]
-        self.head = nn.Sequential(
-            nn.Sequential(*head), nn.Linear(dims[-1], num_classes)
-        )
+        if num_head_layers > 0:
+            head = []
+            for _ in range(num_head_layers - 1):
+                head += [nn.Linear(dims[-1], dims[-1]), nn.ReLU(inplace=True)]
+            if drop_rate > 0:
+                head += [nn.Dropout(drop_rate)]
+            self.head = nn.Sequential(
+                nn.Sequential(*head), nn.Linear(dims[-1], num_classes)
+            )
+        self.num_head_layers = num_head_layers
         self.apply(self.init_weights)
 
     def forward_features(self, x: torch.Tensor) -> torch.Tensor:
@@ -97,7 +99,8 @@ class NFNeXt(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.forward_features(x)
-        x = self.head(x)
+        if self.num_head_layers > 0:
+            x = self.head(x)
         return x
 
     @staticmethod
