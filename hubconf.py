@@ -10,9 +10,9 @@ from torch.hub import load_state_dict_from_url
 import cfg
 
 _BASE_URL = "https://github.com/cueaz/nfnext/releases/download"
-_model_urls = {
-    "tiny": {"i1k_220908": f"{_BASE_URL}/"},
-    "small": {"i1k_220908": f"{_BASE_URL}/"},
+_MODEL_URLS = {
+    "tiny": {"imagenet1k_220908": f"{_BASE_URL}/"},
+    "small": {"imagenet1k_220908": f"{_BASE_URL}/"},
 }
 
 
@@ -25,8 +25,10 @@ def _model(
     model = getattr(cfg, name)(**kwargs)
     if pretrained is not None:
         state_dict = load_state_dict_from_url(
-            _model_urls[name][pretrained],
+            _MODEL_URLS[name][pretrained],
             progress=progress,
+            check_hash=True,
+            map_location="cpu",
         )
         model.load_state_dict(state_dict)
     return model
