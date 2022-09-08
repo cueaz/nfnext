@@ -1,6 +1,7 @@
 # pylint: disable=wrong-import-position
 dependencies = ["torch"]
 
+from functools import partial
 from typing import Any
 
 from torch import nn
@@ -8,9 +9,10 @@ from torch.hub import load_state_dict_from_url
 
 import cfg
 
+_base_url = "https://github.com/cueaz/nfnext/releases/download"
 _model_urls = {
-    "small": {"i1k_220908": ""},
-    "tiny": {"i1k_220908": ""},
+    "tiny": {"i1k_220908": f"{_base_url}/"},
+    "small": {"i1k_220908": f"{_base_url}/"},
 }
 
 
@@ -18,7 +20,7 @@ def _model(
     name: str,
     pretrained: str | None = None,
     progress: bool = True,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> nn.Module:
     model = getattr(cfg, name)(**kwargs)
     if pretrained is not None:
@@ -30,5 +32,5 @@ def _model(
     return model
 
 
-tiny = _model("tiny")
-small = _model("small")
+tiny = partial(_model, "tiny")
+small = partial(_model, "small")
