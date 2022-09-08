@@ -11,8 +11,8 @@ import cfg
 
 _BASE_URL = "https://github.com/cueaz/nfnext/releases/download"
 _MODEL_URLS = {
-    "tiny": {"imagenet1k_220908": f"{_BASE_URL}/"},
-    "small": {"imagenet1k_220908": f"{_BASE_URL}/"},
+    "tiny_1k": {"imagenet_220908": f"{_BASE_URL}/"},
+    "small_1k": {"imagenet_220908": f"{_BASE_URL}/"},
 }
 
 
@@ -34,5 +34,5 @@ def _model(
     return model
 
 
-tiny = partial(_model, "tiny")
-small = partial(_model, "small")
+tiny_1k = partial(_model, "tiny_1k")
+small_1k = partial(_model, "small_1k")
