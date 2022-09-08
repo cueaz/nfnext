@@ -9,10 +9,10 @@ from torch.hub import load_state_dict_from_url
 
 import cfg
 
-_base_url = "https://github.com/cueaz/nfnext/releases/download"
+_BASE_URL = "https://github.com/cueaz/nfnext/releases/download"
 _model_urls = {
-    "tiny": {"i1k_220908": f"{_base_url}/"},
-    "small": {"i1k_220908": f"{_base_url}/"},
+    "tiny": {"i1k_220908": f"{_BASE_URL}/"},
+    "small": {"i1k_220908": f"{_BASE_URL}/"},
 }
 
 
