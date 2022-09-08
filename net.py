@@ -2,8 +2,8 @@ import math
 from collections.abc import Sequence
 
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
+from torch import nn
+from torch.nn import functional as F
 
 
 class Residual(nn.Module):
