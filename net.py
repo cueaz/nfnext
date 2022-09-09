@@ -6,29 +6,6 @@ from torch import nn
 from torch.nn import functional as F
 
 
-class Residual(nn.Module):
-    def __init__(self, block: nn.Module) -> None:
-        super().__init__()
-        self.block = block
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return x + self.block(x)
-
-
-class Scale2d(nn.Module):
-    def __init__(self, dim: int, init_value: float = 1e-6) -> None:
-        super().__init__()
-        self.dim = dim
-        self.init_value = init_value
-        self.scale = nn.Parameter(torch.full((dim, 1, 1), init_value))
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return x * self.scale
-
-    def extra_repr(self) -> str:
-        return f"{self.dim}, init_value={self.init_value}"
-
-
 class NFNeXt(nn.Module):
     def __init__(
         self,
@@ -71,7 +48,7 @@ class NFNeXt(nn.Module):
                 ]
                 if drop_path_rate > 0:
                     block += [DropPath(dp_rates[i][j])]
-                stage += [Residual(nn.Sequential(*block))]
+                stage += [Residual(*block)]
             stages += [nn.Sequential(*stage)]
         self.stages = nn.Sequential(*stages)
         self.pool = nn.Sequential(
@@ -110,6 +87,26 @@ class NFNeXt(nn.Module):
             nn.init.zeros_(m.bias)
 
 
+class Residual(nn.Sequential):
+    # pylint: disable=arguments-renamed
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x + super().forward(x)
+
+
+class Scale2d(nn.Module):
+    def __init__(self, dim: int, init_value: float = 1e-6) -> None:
+        super().__init__()
+        self.dim = dim
+        self.init_value = init_value
+        self.scale = nn.Parameter(torch.full((dim, 1, 1), init_value))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x * self.scale
+
+    def extra_repr(self) -> str:
+        return f"{self.dim}, init_value={self.init_value}"
+
+
 # https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/layers/drop.py
 
 
@@ -143,7 +140,7 @@ class DropPath(nn.Module):
         return drop_path(x, self.drop_prob, self.training, self.scale_by_keep)
 
     def extra_repr(self) -> str:
-        return f"drop_prob={round(self.drop_prob,3):0.3f}"
+        return f"drop_prob={round(self.drop_prob, 3):0.3f}"
 
 
 # https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/layers/std_conv.py
@@ -181,6 +178,7 @@ class ScaledStdConv2d(nn.Conv2d):
             gamma * self.weight[0].numel() ** -0.5
         )  # gamma * 1 / sqrt(fan-in)
         self.eps = eps
+        self.gamma = gamma
 
     # pylint: disable=arguments-renamed
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -201,4 +199,10 @@ class ScaledStdConv2d(nn.Conv2d):
             self.padding,
             self.dilation,
             self.groups,
+        )
+
+    def extra_repr(self) -> str:
+        return (
+            super().extra_repr()
+            + f", eps={self.eps}, gamma={round(self.gamma, 3):0.3f}"
         )
