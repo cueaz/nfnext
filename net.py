@@ -46,8 +46,10 @@ class NFNeXt(nn.Module):
                 stage += [Residual(*block)]
             if i < len(depths) - 1:
                 stage += [
-                    nn.AvgPool2d(kernel_size=2, stride=2),
-                    ScaledStdConv2d(dim, dims[i + 1], kernel_size=1),
+                    nn.Sequential(
+                        nn.AvgPool2d(kernel_size=2, stride=2),
+                        ScaledStdConv2d(dim, dims[i + 1], kernel_size=1),
+                    )
                 ]
             else:
                 stage += [LayerNorm2d(dim)]
