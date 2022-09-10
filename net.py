@@ -18,6 +18,7 @@ class NFNeXt(nn.Module):
         drop_path_rate: float = 0.0,
     ) -> None:
         super().__init__()
+        assert len(depths) == len(dims)
         self.stem = nn.Sequential(
             nn.Conv2d(in_channels, 16 * in_channels, kernel_size=1),
             nn.AvgPool2d(kernel_size=4, stride=4),
@@ -28,11 +29,6 @@ class NFNeXt(nn.Module):
         stages = []
         for i, (depth, dim) in enumerate(zip(depths, dims)):
             stage = []
-            if i > 0:
-                stage += [
-                    nn.AvgPool2d(kernel_size=2, stride=2),
-                    ScaledStdConv2d(dims[i - 1], dim, kernel_size=1),
-                ]
             for j in range(depth):
                 block = [
                     nn.Conv2d(dim, dim, kernel_size=7, padding=3, groups=dim),
@@ -49,12 +45,18 @@ class NFNeXt(nn.Module):
                 if drop_path_rate > 0:
                     block += [DropPath(dp_rates[i][j])]
                 stage += [Residual(*block)]
+            if i < len(depths) - 1:
+                stage += [
+                    nn.AvgPool2d(kernel_size=2, stride=2),
+                    ScaledStdConv2d(dim, dims[i + 1], kernel_size=1),
+                ]
+            else:
+                stage += [LayerNorm2d(dim)]
             stages += [nn.Sequential(*stage)]
         self.stages = nn.Sequential(*stages)
         self.pool = nn.Sequential(
             nn.AdaptiveAvgPool2d(output_size=1),
             nn.Flatten(),
-            nn.LayerNorm(dims[-1], eps=1e-6),
         )
         if num_head_layers > 0:
             head = []
@@ -98,10 +100,10 @@ class Scale2d(nn.Module):
         super().__init__()
         self.dim = dim
         self.init_value = init_value
-        self.scale = nn.Parameter(torch.full((dim, 1, 1), init_value))
+        self.scale = nn.Parameter(torch.full((dim,), init_value))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return x * self.scale
+        return self.scale[:, None, None] * x
 
     def extra_repr(self) -> str:
         return f"{self.dim}, init_value={self.init_value}"
@@ -206,3 +208,22 @@ class ScaledStdConv2d(nn.Conv2d):
             super().extra_repr()
             + f", eps={self.eps}, gamma={round(self.gamma, 3):0.3f}"
         )
+
+
+# https://github.com/rwightman/pytorch-image-models/blob/master/timm/models/layers/norm.py
+
+
+class LayerNorm2d(nn.LayerNorm):
+    def __init__(
+        self, num_channels: int, eps: float = 1e-6, affine: bool = True
+    ) -> None:
+        super().__init__(num_channels, eps=eps, elementwise_affine=affine)
+
+    # pylint: disable=arguments-renamed
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = x.permute(0, 2, 3, 1)
+        x = F.layer_norm(
+            x, self.normalized_shape, self.weight, self.bias, self.eps
+        )
+        x = x.permute(0, 3, 1, 2)
+        return x
