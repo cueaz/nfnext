@@ -57,13 +57,13 @@ class NFNeXt(nn.Module):
             nn.AdaptiveAvgPool2d(output_size=1),
             nn.Flatten(),
         )
-        if num_head_layers > 0:
+        if use_head := num_head_layers > 0:
             head = []
             for _ in range(num_head_layers - 1):
                 head += [nn.Linear(dims[-1], dims[-1]), nn.ReLU(inplace=True)]
             head += [nn.Linear(dims[-1], num_classes)]
             self.head = nn.Sequential(*head)
-        self.use_head = num_head_layers > 0
+        self.use_head = use_head
         self.apply(self.init_weights)
 
     def forward_features(self, x: torch.Tensor) -> torch.Tensor:
