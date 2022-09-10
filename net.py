@@ -14,7 +14,6 @@ class NFNeXt(nn.Module):
         in_channels: int = 3,
         num_classes: int = 1000,
         num_head_layers: int = 1,
-        drop_rate: float = 0.0,
         drop_path_rate: float = 0.0,
     ) -> None:
         super().__init__()
@@ -62,12 +61,9 @@ class NFNeXt(nn.Module):
             head = []
             for _ in range(num_head_layers - 1):
                 head += [nn.Linear(dims[-1], dims[-1]), nn.ReLU(inplace=True)]
-            if drop_rate > 0:
-                head += [nn.Dropout(drop_rate)]
-            self.head = nn.Sequential(
-                nn.Sequential(*head), nn.Linear(dims[-1], num_classes)
-            )
-        self.num_head_layers = num_head_layers
+            head += [nn.Linear(dims[-1], num_classes)]
+            self.head = nn.Sequential(*head)
+        self.use_head = num_head_layers > 0
         self.apply(self.init_weights)
 
     def forward_features(self, x: torch.Tensor) -> torch.Tensor:
@@ -78,7 +74,7 @@ class NFNeXt(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.forward_features(x)
-        if self.num_head_layers > 0:
+        if self.use_head:
             x = self.head(x)
         return x
 
